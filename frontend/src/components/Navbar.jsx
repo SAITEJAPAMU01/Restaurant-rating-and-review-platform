@@ -12,7 +12,7 @@ export const Navbar = ({ currentView, setCurrentView }) => {
           <div className="brand-logo">
             <UtensilsCrossed size={22} color="#ffffff" />
           </div>
-          <span className="brand-title">GourmetScore</span>
+          <span className="brand-title">TejaScore</span>
         </div>
 
         <nav className="nav-links">

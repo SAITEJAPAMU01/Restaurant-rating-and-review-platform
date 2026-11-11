@@ -94,7 +94,7 @@ const AppContent = () => {
       </main>
 
       <footer className="footer">
-        <p>© 2026 GourmetScore — Restaurant Rating & Review Platform.</p>
+        <p>© 2026 TejaScore — Restaurant Rating & Review Platform.</p>
         <p style={{ fontSize: '0.75rem', marginTop: '4px', color: '#9ca3af' }}>
           Role-Based Access Control • MongoDB Aggregation Pipelines • Compound Unique Indexing
         </p>

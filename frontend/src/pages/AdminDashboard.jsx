@@ -11,11 +11,15 @@ import {
   CheckCircle,
   AlertCircle,
   Link as LinkIcon,
+  Edit2,
+  X,
 } from 'lucide-react';
 import { adminApi, restaurantApi, reviewApi } from '../services/api';
 import StarRating from '../components/StarRating';
+import { useAuth } from '../context/AuthContext';
 
 export const AdminDashboard = () => {
+  const { user: currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'users' | 'restaurants' | 'reviews' | 'create-owner'
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
@@ -31,6 +35,10 @@ export const AdminDashboard = () => {
 
   // Restaurant search
   const [restaurantSearch, setRestaurantSearch] = useState('');
+  const [restaurantLocation, setRestaurantLocation] = useState('');
+  const [restaurantCuisine, setRestaurantCuisine] = useState('');
+  const [editingUserId, setEditingUserId] = useState(null);
+  const [editingUserForm, setEditingUserForm] = useState({ name: '', email: '', role: 'customer' });
 
   // Create Owner Form State
   const [ownerForm, setOwnerForm] = useState({
@@ -84,6 +92,69 @@ export const AdminDashboard = () => {
       if (res.success) setUsers(res.data);
     } catch (err) {
       setError(err.message);
+    }
+  };
+
+  const handleRestaurantSearch = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await restaurantApi.getAll({
+        name: restaurantSearch,
+        location: restaurantLocation,
+        cuisine: restaurantCuisine,
+      });
+      if (res.success) setRestaurants(res.data);
+    } catch (err) {
+      setError(err.message || 'Failed to search restaurants');
+    }
+  };
+
+  const clearRestaurantSearch = async () => {
+    setRestaurantSearch('');
+    setRestaurantLocation('');
+    setRestaurantCuisine('');
+    try {
+      const res = await restaurantApi.getAll();
+      if (res.success) setRestaurants(res.data);
+    } catch (err) {
+      setError(err.message || 'Failed to load restaurants');
+    }
+  };
+
+  const startEditingUser = (user) => {
+    setEditingUserId(user._id);
+    setEditingUserForm({ name: user.name, email: user.email, role: user.role });
+  };
+
+  const cancelEditingUser = () => {
+    setEditingUserId(null);
+    setEditingUserForm({ name: '', email: '', role: 'customer' });
+  };
+
+  const handleUpdateUser = async (userId) => {
+    setError('');
+    setSuccess('');
+    try {
+      await adminApi.updateUser(userId, editingUserForm);
+      cancelEditingUser();
+      await fetchDashboardData();
+      setSuccess('User updated successfully.');
+    } catch (err) {
+      setError(err.message || 'Failed to update user');
+    }
+  };
+
+  const handleDeleteUser = async (user) => {
+    if (!window.confirm(`Delete ${user.name}? Their reviews will be removed and restaurant assignments cleared.`)) return;
+    setError('');
+    setSuccess('');
+    try {
+      await adminApi.deleteUser(user._id);
+      if (editingUserId === user._id) cancelEditingUser();
+      await fetchDashboardData();
+      setSuccess('User deleted successfully.');
+    } catch (err) {
+      setError(err.message || 'Failed to delete user');
     }
   };
 
@@ -393,19 +464,83 @@ export const AdminDashboard = () => {
                     <th>Email</th>
                     <th>Assigned Role</th>
                     <th>Registered Date</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((u) => (
-                    <tr key={u._id}>
-                      <td style={{ fontWeight: 600 }}>{u.name}</td>
-                      <td>{u.email}</td>
-                      <td>
-                        <span className={`role-pill role-${u.role}`}>{u.role}</span>
-                      </td>
-                      <td>{new Date(u.createdAt).toLocaleDateString()}</td>
-                    </tr>
-                  ))}
+                  {users.map((u) => {
+                    const isEditing = editingUserId === u._id;
+                    const isCurrentUser = currentUser?.id === u._id;
+                    return (
+                      <tr key={u._id}>
+                        <td style={{ fontWeight: 600 }}>
+                          {isEditing ? (
+                            <input
+                              className="form-control"
+                              value={editingUserForm.name}
+                              onChange={(e) => setEditingUserForm({ ...editingUserForm, name: e.target.value })}
+                              aria-label="User name"
+                            />
+                          ) : u.name}
+                        </td>
+                        <td>
+                          {isEditing ? (
+                            <input
+                              className="form-control"
+                              type="email"
+                              value={editingUserForm.email}
+                              onChange={(e) => setEditingUserForm({ ...editingUserForm, email: e.target.value })}
+                              aria-label="User email"
+                            />
+                          ) : u.email}
+                        </td>
+                        <td>
+                          {isEditing ? (
+                            <select
+                              className="form-control"
+                              value={editingUserForm.role}
+                              onChange={(e) => setEditingUserForm({ ...editingUserForm, role: e.target.value })}
+                              disabled={isCurrentUser}
+                              aria-label="User role"
+                            >
+                              <option value="customer">Customer</option>
+                              <option value="owner">Restaurant Owner</option>
+                              <option value="admin">Administrator</option>
+                            </select>
+                          ) : (
+                            <span className={`role-pill role-${u.role}`}>{u.role}</span>
+                          )}
+                        </td>
+                        <td>{new Date(u.createdAt).toLocaleDateString()}</td>
+                        <td>
+                          {isEditing ? (
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button className="btn btn-xs btn-primary" onClick={() => handleUpdateUser(u._id)}>
+                                Save
+                              </button>
+                              <button className="btn btn-xs btn-secondary" onClick={cancelEditingUser}>
+                                <X size={14} /> Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button className="btn btn-xs btn-secondary" onClick={() => startEditingUser(u)}>
+                                <Edit2 size={14} /> Edit
+                              </button>
+                              <button
+                                className="btn btn-xs btn-outline-danger"
+                                onClick={() => handleDeleteUser(u)}
+                                disabled={isCurrentUser}
+                                title={isCurrentUser ? 'You cannot delete your own account' : 'Delete user'}
+                              >
+                                <Trash2 size={14} /> Delete
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -421,6 +556,36 @@ export const AdminDashboard = () => {
             <p className="card-subtitle-small">
               Assign or change the Restaurant Owner for each dining establishment
             </p>
+
+            <form
+              onSubmit={handleRestaurantSearch}
+              className="table-filter-bar"
+              style={{ display: 'flex', gap: '8px', marginTop: '16px', marginBottom: '16px' }}
+            >
+              <input
+                className="form-control"
+                placeholder="Restaurant name"
+                value={restaurantSearch}
+                onChange={(e) => setRestaurantSearch(e.target.value)}
+                aria-label="Search restaurant name"
+              />
+              <input
+                className="form-control"
+                placeholder="Location"
+                value={restaurantLocation}
+                onChange={(e) => setRestaurantLocation(e.target.value)}
+                aria-label="Filter restaurant location"
+              />
+              <input
+                className="form-control"
+                placeholder="Cuisine"
+                value={restaurantCuisine}
+                onChange={(e) => setRestaurantCuisine(e.target.value)}
+                aria-label="Filter restaurant cuisine"
+              />
+              <button type="submit" className="btn btn-secondary">Search</button>
+              <button type="button" className="btn btn-secondary" onClick={clearRestaurantSearch}>Clear</button>
+            </form>
 
             <div className="styled-table-wrap">
               <table className="styled-table">

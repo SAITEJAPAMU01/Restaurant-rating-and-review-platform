@@ -6,7 +6,7 @@ import { validatePassword } from '../middleware/validation.js';
 const generateToken = (user) => {
   return jwt.sign(
     { id: user._id, role: user.role, email: user.email, name: user.name },
-    process.env.JWT_SECRET || 'supersecret_jwt_key_restaurant_review_platform_2026!',
+    process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 };

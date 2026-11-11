@@ -50,7 +50,7 @@ export const RegisterPage = ({ onNavigateLogin, onSuccess }) => {
             <UserPlus size={26} color="#d97706" />
           </div>
           <h2 className="auth-title">Create Customer Account</h2>
-          <p className="auth-subtitle">Join GourmetScore to rate, review, and discover restaurants</p>
+          <p className="auth-subtitle">Join TejaScore to rate, review, and discover restaurants</p>
         </div>
 
         {error && (

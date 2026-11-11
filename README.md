@@ -1,4 +1,4 @@
-# 🍽️ GourmetScore — Restaurant Rating & Review Platform
+# 🍽️ TejaScore — Restaurant Rating & Review Platform
 
 A full-stack, enterprise-grade restaurant discovery, rating, and review platform built with the **MERN Stack** (React, Node.js, Express, MongoDB). Enforces strict role-based access control (RBAC), database-level unique review constraints, server-side search and filtering, and MongoDB aggregation pipelines for rating distributions and platform statistics.
 
@@ -43,7 +43,7 @@ Use these credentials to test the platform immediately. The database automatical
 restaurant-platform/
 ├── backend/
 │   ├── config/
-│   │   └── db.js                 # MongoDB connection & in-memory fallback
+│   │   └── db.js                 # Persistent MongoDB connection
 │   ├── controllers/
 │   │   ├── authController.js       # Register, login, getProfile
 │   │   ├── restaurantController.js # CRUD, search/filter, aggregation metrics
@@ -80,7 +80,7 @@ restaurant-platform/
 
 ### 1. Prerequisites
 - **Node.js** (v18 or higher recommended)
-- **MongoDB** (Local instance or MongoDB Atlas URI, or default in-memory MongoDB)
+- **MongoDB** (local instance or MongoDB Atlas)
 
 ### 2. Setup Backend
 ```bash
@@ -90,8 +90,13 @@ npm run seed     # Seeds sample users, restaurants, and reviews
 npm run dev      # Starts API server on http://localhost:5000
 ```
 
-> **Note on Database Connection:**
-> If a local MongoDB instance is running at `mongodb://127.0.0.1:27017/restaurant_platform`, the backend connects to it. If not reachable, the backend automatically initializes `mongodb-memory-server` with zero setup needed!
+Before starting, copy `backend/.env.example` to `backend/.env`, set `MONGODB_URI` to a persistent local or Atlas database, and replace `JWT_SECRET` with a unique random value. For example, generate one with:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+The backend exits with an error if MongoDB cannot be reached or `JWT_SECRET` is missing; it does not fall back to a volatile in-memory database.
 
 ### 3. Setup Frontend
 In a separate terminal:
@@ -184,6 +189,8 @@ The API uses standard HTTP response status codes:
 | `/api/reviews/:id` | `DELETE` | Customer/Admin | Delete customer's own review, or Admin moderation |
 | `/api/admin/dashboard` | `GET` | Admin | Overall metrics (total users, restaurants, reviews, avg rating) |
 | `/api/admin/users` | `GET` | Admin | User directory with search and role filter |
+| `/api/admin/users/:id` | `PUT` | Admin | Update a user's name, email, or role |
+| `/api/admin/users/:id` | `DELETE` | Admin | Delete a user, their reviews, and restaurant assignments |
 | `/api/admin/owners` | `POST` | Admin | Create restaurant owner account |
 | `/api/admin/restaurants/:id/assign-owner` | `PUT` | Admin | Assign or reassign owner to restaurant |
 | `/api/admin/reviews` | `GET` | Admin | View all reviews across platform for moderation |

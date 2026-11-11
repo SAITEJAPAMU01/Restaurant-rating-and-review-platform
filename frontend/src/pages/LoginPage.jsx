@@ -38,7 +38,7 @@ export const LoginPage = ({ onNavigateRegister, onSuccess }) => {
             <LogIn size={26} color="#d97706" />
           </div>
           <h2 className="auth-title">Welcome Back</h2>
-          <p className="auth-subtitle">Sign in to your GourmetScore account</p>
+          <p className="auth-subtitle">Sign in to your TejaScore account</p>
         </div>
 
         {error && (

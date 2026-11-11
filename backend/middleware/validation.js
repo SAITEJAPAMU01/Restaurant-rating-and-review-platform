@@ -30,17 +30,16 @@ export const validateRating = (rating) => {
   if (rating === undefined || rating === null || rating === '') {
     return { valid: false, message: 'Rating is required' };
   }
-  const num = Number(rating);
-  if (isNaN(num)) {
+  if (typeof rating !== 'number' || !Number.isFinite(rating)) {
     return { valid: false, message: 'Rating must be a numeric value' };
   }
-  if (!Number.isInteger(num)) {
+  if (!Number.isInteger(rating)) {
     return { valid: false, message: 'Rating must be a whole number (integer)' };
   }
-  if (num < 1 || num > 5) {
+  if (rating < 1 || rating > 5) {
     return { valid: false, message: 'Rating must be between 1 and 5' };
   }
-  return { valid: true, value: num };
+  return { valid: true, value: rating };
 };
 
 // ObjectId Validation

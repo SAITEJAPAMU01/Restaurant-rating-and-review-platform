@@ -56,6 +56,10 @@ const PORT = process.env.PORT || 5000;
 // Connect Database, auto-seed if empty, and start server
 const startServer = async () => {
   try {
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET must be set in the backend environment before starting the server.');
+    }
+
     await connectDB();
 
     // Auto-seed sample data if database is fresh/empty

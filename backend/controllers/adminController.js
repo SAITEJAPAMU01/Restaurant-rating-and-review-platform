@@ -3,6 +3,8 @@ import Restaurant from '../models/Restaurant.js';
 import Review from '../models/Review.js';
 import { validatePassword, isValidObjectId } from '../middleware/validation.js';
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 // @desc   Get Administrator Dashboard Statistics
 // @route  GET /api/admin/dashboard
 // @access Admin only
@@ -79,6 +81,117 @@ export const getUsers = async (req, res, next) => {
       success: true,
       count: users.length,
       data: users,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc   Update a user's name, email, or role
+// @route  PUT /api/admin/users/:id
+// @access Admin only
+export const updateUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const { name, email, role } = req.body;
+    if (name === undefined && email === undefined && role === undefined) {
+      return res.status(400).json({ success: false, message: 'Provide a name, email, or role to update.' });
+    }
+
+    if (name !== undefined) {
+      if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 50) {
+        return res.status(400).json({ success: false, message: 'Name must be between 2 and 50 characters.' });
+      }
+      user.name = name.trim();
+    }
+
+    if (email !== undefined) {
+      if (typeof email !== 'string' || !emailRegex.test(email.trim())) {
+        return res.status(400).json({ success: false, message: 'Please provide a valid email address.' });
+      }
+      const normalizedEmail = email.trim().toLowerCase();
+      const emailInUse = await User.exists({ email: normalizedEmail, _id: { $ne: user._id } });
+      if (emailInUse) {
+        return res.status(409).json({ success: false, message: 'An account with this email address already exists.' });
+      }
+      user.email = normalizedEmail;
+    }
+
+    if (role !== undefined) {
+      if (!['customer', 'owner', 'admin'].includes(role)) {
+        return res.status(400).json({ success: false, message: 'Role must be customer, owner, or admin.' });
+      }
+      if (user._id.equals(req.user._id) && role !== user.role) {
+        return res.status(403).json({ success: false, message: 'You cannot change your own account role.' });
+      }
+      if (user.role === 'admin' && role !== 'admin') {
+        const adminCount = await User.countDocuments({ role: 'admin' });
+        if (adminCount <= 1) {
+          return res.status(409).json({ success: false, message: 'The last administrator cannot be demoted.' });
+        }
+      }
+      user.role = role;
+    }
+
+    await user.save();
+
+    if (user.role !== 'owner') {
+      await Restaurant.updateMany({ owner: user._id }, { $set: { owner: null } });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'User updated successfully.',
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc   Delete a user and remove their reviews and restaurant assignments
+// @route  DELETE /api/admin/users/:id
+// @access Admin only
+export const deleteUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    if (user._id.equals(req.user._id)) {
+      return res.status(403).json({ success: false, message: 'You cannot delete your own administrator account.' });
+    }
+    if (user.role === 'admin' && await User.countDocuments({ role: 'admin' }) <= 1) {
+      return res.status(409).json({ success: false, message: 'The last administrator cannot be deleted.' });
+    }
+
+    await Review.deleteMany({ customer: user._id });
+    await Restaurant.updateMany({ owner: user._id }, { $set: { owner: null } });
+    await user.deleteOne();
+
+    return res.status(200).json({
+      success: true,
+      message: 'User deleted. Their reviews were removed and restaurant assignments were cleared.',
     });
   } catch (err) {
     next(err);

@@ -110,6 +110,15 @@ export const adminApi = {
     const qs = query.toString();
     return apiRequest(`/admin/users${qs ? `?${qs}` : ''}`);
   },
+  updateUser: (id, userData) =>
+    apiRequest(`/admin/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(userData),
+    }),
+  deleteUser: (id) =>
+    apiRequest(`/admin/users/${id}`, {
+      method: 'DELETE',
+    }),
   createOwner: (ownerData) =>
     apiRequest('/admin/owners', {
       method: 'POST',
